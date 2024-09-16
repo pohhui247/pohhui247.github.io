@@ -11,6 +11,7 @@
 typedef enum { 
     token_assignment, // <- 
     token_comment,    // #
+    token_function,
     token_int,        // int 
     token_print,      // print
     token_space,      // space 
@@ -33,9 +34,11 @@ identifier next_token(char input[], int *index) {
     identifier n_TOKEN;
     n_TOKEN.type     = token_unknown; 
     n_TOKEN.name[0]  = '\0';  
-    n_TOKEN.val      = 0;
+    n_TOKEN.val      = 0   ;
     
-    int nameINDEX = 0;
+    int nameINDEX    = 0   ;
+    int intINDEX     = 0   ;
+    char num[50]           ; 
     
     if (input[*index] == '#') {
         //n_TOKEN.type = token_comment;
@@ -73,19 +76,46 @@ identifier next_token(char input[], int *index) {
     //} 
     
     if (isalpha(input[*index])) {
+        n_TOKEN.type = token_name; 
         while(isalpha(input[*index])) {
             n_TOKEN.name[nameINDEX++] = input[*index];       
             (*index)++;
         }
         n_TOKEN.name[nameINDEX] = '\0';
+        
+        if (strcmp(n_TOKEN.name, "function") == 0) {
+            n_TOKEN.type = token_function;
+            return n_TOKEN;
+        }
+        
+        if (strcmp(n_TOKEN.name, "print") == 0) {
+            n_TOKEN.type = token_print;
+            return n_TOKEN;
+        }
+        
         return n_TOKEN; 
     } 
     
     if (isdigit(input[*index])) {
-        n_TOKEN.type = token_int;
-        (*index)++;
+        n_TOKEN.type = token_int; 
+        while(isdigit(input[*index])) {
+            num[intINDEX++] = input[*index];       
+            (*index)++;
+        }
+        num[intINDEX] = '\0';
+        n_TOKEN.val = atoi(num);
         return n_TOKEN; 
     } 
+    
+    
+    //if (isdigit(input[*index])) {
+        
+    //    n_TOKEN.type = token_int;
+    //    n_TOKEN.val = input[*index];
+     
+    //    (*index)++;
+    //    return n_TOKEN; 
+    //} 
     
     
     if (is_symbol(input[*index])) {
@@ -105,7 +135,7 @@ int parse(char *input) {
     identifier token; 
     int i = 0; 
     while (input[i] != '\0') { 
-        printf("%c", input[i]);
+        //printf("%c", input[i]);
         token = next_token(input, &i);
         
         //if (token.type == token_comment) {
@@ -117,11 +147,11 @@ int parse(char *input) {
         //}
         
         if (token.type == token_name) {
-            printf("%s name\n", token.name);
+            printf("%s var_name\n", token.name);
         }
         
         if (token.type == token_int) {
-            printf(" int\n");
+            printf("%d int\n", token.val);
         }
     
         if (token.type == token_sym) {
@@ -131,7 +161,14 @@ int parse(char *input) {
         if (token.type == token_assignment) {
             printf("%c%c assignment\n", input[i], input[i + 1]);
         }
-    
+        
+        if (token.type == token_function) {
+            printf("%s funct\n", token.name);
+        }
+        
+        if (token.type == token_print) {
+            printf("%s print\n", token.name);
+        }
     
     }
 }  
