@@ -1,0 +1,54 @@
+identifier next_token(char input[], int *index) {
+    identifier n_TOKEN;
+    n_TOKEN.type     = token_unknown; 
+    n_TOKEN.name[0]  = '\0';  
+    n_TOKEN.val      = 0;
+    
+    if (input[*index] == '#') {
+        (*index)++;
+        n_TOKEN.type = token_comment; 
+        while (input[*index] != '\n' && input[*index] != '\0') {
+            (*index)++;
+        }
+        return n_TOKEN;
+                
+    } 
+    
+    if (input[*index] == ' ') {
+        n_TOKEN.type = token_space;
+        (*index)++;
+        return n_TOKEN;             
+    } 
+ 
+    if (isalpha(input[*index])) {
+        n_TOKEN.type = token_name;
+        (*index)++;
+        return n_TOKEN; 
+    } 
+    
+    return n_TOKEN;
+    
+     
+}
+
+
+
+int parse(char *input) {
+    
+    identifier token; 
+    int i = 0; 
+    while (input[i] != '\0') { 
+        printf("%c", input[i]);
+        token = next_token(input, &i);
+        
+        
+        if (token.type == token_space) {
+            printf(" space\n");
+        }
+        
+        if (token.type == token_name) {
+            printf(" name\n");
+        }
+    
+    }
+}  
