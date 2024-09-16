@@ -74,8 +74,7 @@ identifier next_token(char input[], int *index) {
     
     if (isalpha(input[*index])) {
         while(isalpha(input[*index])) {
-            n_TOKEN.name[nameINDEX] = input[*index];
-            (nameINDEX)++;
+            n_TOKEN.name[nameINDEX++] = input[*index];       
             (*index)++;
         }
         n_TOKEN.name[nameINDEX] = '\0';
@@ -109,13 +108,13 @@ int parse(char *input) {
         printf("%c", input[i]);
         token = next_token(input, &i);
         
-        if (token.type == token_comment) {
-            printf(" comment\n");
-        }
+        //if (token.type == token_comment) {
+        //    printf(" comment\n");
+        //}
         
-        if (token.type == token_space) {
-            printf(" space\n");
-        }
+        //if (token.type == token_space) {
+        //    printf(" space\n");
+        //}
         
         if (token.type == token_name) {
             printf("%s name\n", token.name);
