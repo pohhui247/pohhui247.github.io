@@ -1,3 +1,13 @@
+// CITS2202 Porject 1 2024 
+// Student1:    STUDENT-NUMBER1    NAME-1 
+// Student2:    STUDENT-NUMBER2    NAME-2 
+// Platform:    Linux 
+
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 typedef enum { 
     token_assignment, // <- 
     token_comment,    // #
@@ -63,8 +73,9 @@ identifier next_token(char input[], int *index) {
     //} 
     
     if (isalpha(input[*index])) {
-        while(input[*index] != ' ') {
-            n_TOKEN.name[nameINDEX++] = input[*index]
+        while(isalpha(input[*index])) {
+            n_TOKEN.name[nameINDEX] = input[*index];
+            (nameINDEX)++;
             (*index)++;
         }
         n_TOKEN.name[nameINDEX] = '\0';
@@ -125,3 +136,27 @@ int parse(char *input) {
     
     }
 }  
+
+
+int main(int argc, char *argv[]) {
+
+    char input[1000];
+    int index = 0;
+    char ch;   
+    FILE *file = fopen(argv[1], "r");
+    
+    // stores input file into array
+    while ((ch = fgetc(file)) != EOF && index < sizeof(input) - 1) {
+        input[index++] = ch;
+    }
+    input[index] = '\0';
+    
+    // printf("%s", input);
+    
+    fclose(file); 
+    
+    parse(input);
+    
+    return 0; 
+
+} 
