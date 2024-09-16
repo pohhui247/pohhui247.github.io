@@ -5,15 +5,17 @@ identifier next_token(char input[], int *index) {
     n_TOKEN.val      = 0;
     
     if (input[*index] == '#') {
-        (*index)++;
+        
         n_TOKEN.type = token_comment; 
         while (input[*index] != '\n' && input[*index] != '\0') {
             (*index)++;
         }
+        if (input[*index] == '\n') (*index)++;
         return n_TOKEN;
                 
     } 
     
+    // space 
     if (input[*index] == ' ') {
         n_TOKEN.type = token_space;
         (*index)++;
@@ -26,6 +28,7 @@ identifier next_token(char input[], int *index) {
         return n_TOKEN; 
     } 
     
+    (*index)++;
     return n_TOKEN;
     
      
@@ -43,11 +46,11 @@ int parse(char *input) {
         
         
         if (token.type == token_space) {
-            printf(" space\n");
+            printf("%c space\n", input[i]);
         }
         
         if (token.type == token_name) {
-            printf(" name\n");
+            printf("%c name\n", input[i]);
         }
     
     }
