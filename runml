@@ -1,44 +1,67 @@
-// CITS2202 Porject 1 2024 
-// Student1:    STUDENT-NUMBER1    NAME-1 
-// Student2:    STUDENT-NUMBER2    NAME-2 
-// Platform:    Linux 
-
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+#define MAX_TOKEN_LENGTH 50
+
 typedef enum { 
-    token_assignment, // <- 
-    token_comment,    // #
-    token_function,
-    token_int,        // int 
-    token_print,      // print
-    token_space,      // space 
-    token_sym,        // symbol 
-    token_unknown,    // unknown tokens 
-    token_name        // variable names
-} Token; 
+    TOKEN_ASSIGNMENT, // <- 
+    TOKEN_COMMENT,    // #
+    TOKEN_FUNCTION,   // function
+    TOKEN_REAL,       // int 
+    TOKEN_PRINT,      // print
+    TOKEN_SPACE,      // space 
+    TOKEN_SYM,        // symbol 
+    TOKEN_UNKNOWN,    // unknown tokens 
+    TOKEN_NAME        // variable names
+} TokenType; 
 
 typedef struct {
-   Token type;        // For types of token     
-   char name[50];     // For variables such as x  
-   int val;           // For integer values 
-} identifier;            
+   TokenType type;                  // For types of token     
+   char name[MAX_TOKEN_LENGTH];     // For variables such as x  
+   double val;                      // For integer values 
+} Token;             
 
 int is_symbol(char c) {
     return (c == '.');
 }  
 
-identifier next_token(char input[], int *index) {
-    identifier n_TOKEN;
-    n_TOKEN.type     = token_unknown; 
+Token VARIABLE_TABLE[50]; 
+int VARIABLE_COUNT = 0; 
+
+void STORE_VARIABLE(const char *name, double value) {
+    for (int i = 0; i < VARIABLE_COUNT; i++) {
+        if (strcmp(VARIABLE_TABLE[i].name, name) == 0) {
+            VARIABLE_TABLE[i].val = value;
+            return;
+        }
+    } 
+    strcpy(VARIABLE_TABLE[VARIABLE_COUNT].name, name); 
+    VARIABLE_TABLE[VARIABLE_COUNT].val, value;
+    VARIABLE_TABLE[VARIABLE_COUNT].type, TOKEN_NAME;
+    VARIABLE_COUNT++; 
+}
+
+
+
+
+
+Token next_token(const char input[], int *index) {
+    Token n_TOKEN;
+    n_TOKEN.type     = TOKEN_UNKNOWN; 
     n_TOKEN.name[0]  = '\0';  
     n_TOKEN.val      = 0   ;
     
     int nameINDEX    = 0   ;
     int intINDEX     = 0   ;
     char num[50]           ; 
+    
+    while (input[*index] == ' ') {
+        (*index)++;
+    }
+    
+    
     
     if (input[*index] == '#') {
         //n_TOKEN.type = token_comment;
@@ -47,7 +70,7 @@ identifier next_token(char input[], int *index) {
         
         
         (*index)++;
-        n_TOKEN.type = token_comment; 
+        n_TOKEN.type = TOKEN_COMMENT; 
         while (input[*index] != '\n' && input[*index] != '\0') {
             (*index)++;
         }
@@ -57,26 +80,20 @@ identifier next_token(char input[], int *index) {
     } 
     
     // space 
-    if (input[*index] == ' ') {
-        n_TOKEN.type = token_space;
-        (*index)++;
-        return n_TOKEN;             
+    //if (input[*index] == ' ') {
+    //    n_TOKEN.type = TOKEN_SPACE;
+    //    (*index)++;
+    //    return n_TOKEN;             
     } 
  
     if (input[*index] == '<' && input[*index + 1] == '-') {
-        n_TOKEN.type = token_assignment;
+        n_TOKEN.type = TOKEN_ASSIGNMENT;
         (*index) += 2;
         return n_TOKEN;             
     } 
  
-    //if (isalpha(input[*index])) {
-    //   n_TOKEN.type = token_name;
-    //    (*index)++;
-    //    return n_TOKEN; 
-    //} 
-    
     if (isalpha(input[*index])) {
-        n_TOKEN.type = token_name; 
+        n_TOKEN.type = TOKEN_NAME; 
         while(isalpha(input[*index])) {
             n_TOKEN.name[nameINDEX++] = input[*index];       
             (*index)++;
@@ -84,42 +101,40 @@ identifier next_token(char input[], int *index) {
         n_TOKEN.name[nameINDEX] = '\0';
         
         if (strcmp(n_TOKEN.name, "function") == 0) {
-            n_TOKEN.type = token_function;
+            n_TOKEN.type = TOKEN_FUNCTION;
             return n_TOKEN;
         }
         
         if (strcmp(n_TOKEN.name, "print") == 0) {
-            n_TOKEN.type = token_print;
+            n_TOKEN.type = TOKEN_PRINT;
             return n_TOKEN;
         }
         
         return n_TOKEN; 
     } 
     
+    // Check if is real number (real for short)
     if (isdigit(input[*index])) {
-        n_TOKEN.type = token_int; 
-        while(isdigit(input[*index])) {
-            num[intINDEX++] = input[*index];       
+        n_TOKEN.type = TOKEN_REAL; 
+        int intINDEX = 0;
+        char num[50];
+
+        int decimal_flag = 0; // Check only 1 decimal in the real
+        while(isdigit(input[*index]) || (input[*index] == '.' && !decimal_flag)) {
+            if (input[*index] == '.'){
+                decimal_flag = 1;
+            }
+            num[intINDEX++] = input[*index];
             (*index)++;
         }
+
         num[intINDEX] = '\0';
-        n_TOKEN.val = atoi(num);
+        n_TOKEN.val = atof(num);
         return n_TOKEN; 
     } 
     
-    
-    //if (isdigit(input[*index])) {
-        
-    //    n_TOKEN.type = token_int;
-    //    n_TOKEN.val = input[*index];
-     
-    //    (*index)++;
-    //    return n_TOKEN; 
-    //} 
-    
-    
     if (is_symbol(input[*index])) {
-        n_TOKEN.type = token_sym;
+        n_TOKEN.type = TOKEN_SYM;
         (*index)++;
         return n_TOKEN; 
     } 
@@ -130,57 +145,89 @@ identifier next_token(char input[], int *index) {
 
 
 
-int parse(char *input) {
+void parse(const char *input) {
+    int index = 0; 
+    Token token;
     
-    identifier token; 
-    int i = 0; 
-    while (input[i] != '\0') { 
-        //printf("%c", input[i]);
-        token = next_token(input, &i);
-        
-        //if (token.type == token_comment) {
-        //    printf(" comment\n");
-        //}
-        
-        //if (token.type == token_space) {
-        //    printf(" space\n");
-        //}
-        
-        if (token.type == token_name) {
-            printf("%s var_name\n", token.name);
-        }
-        
-        if (token.type == token_int) {
-            printf("%d int\n", token.val);
-        }
     
-        if (token.type == token_sym) {
-            printf(" sym\n");
+    while (input[index] != '\0') {
+        token = next_token(input, &index);
+
+        switch (token.type) {
+            case TOKEN_NAME:
+                char var_name[50];
+                strcpy(var_name, token.name);
+                
+                
+                token = next_token(input, &index);                                    
+                if (token.type == TOKEN_ASSIGNMENT) {
+                    token = next_token(input, &index);
+                    if (token.type == TOKEN_REAL) {
+                        STORE_VARIABLE(var_name, token.val);
+                        printf("%s %.6f\n", var_name, token.val); 
+                    } 
+                        
+                }
+                break; 
+                
+                
+                
+                printf("%s var_name\n", token.name);
+                break;
+            case TOKEN_REAL:
+                printf("%f real\n", token.val);
+                break;
+            case TOKEN_SYM:
+                printf("%s sym\n", token.name);
+                break;
+            case TOKEN_ASSIGNMENT:
+                printf("%s assignment\n", token.name);
+                break;
+            case TOKEN_FUNCTION:
+                printf("%s funct\n", token.name);
+                break;
+            case TOKEN_PRINT:
+                printf("%s print\n", token.name);
+                break;
+            case TOKEN_COMMENT:
+                printf("comment\n");
+                break;
+            case TOKEN_SPACE:
+                // Ignore spaces
+                break;
+            case TOKEN_UNKNOWN:
+                printf("Unknown token: %s\n", token.name);
+                break;
         }
-        
-        if (token.type == token_assignment) {
-            printf("%c%c assignment\n", input[i], input[i + 1]);
-        }
-        
-        if (token.type == token_function) {
-            printf("%s funct\n", token.name);
-        }
-        
-        if (token.type == token_print) {
-            printf("%s print\n", token.name);
-        }
-    
     }
 }  
 
 
 int main(int argc, char *argv[]) {
-
     char input[1000];
     int index = 0;
     char ch;   
+
+    // Check argument count is valid
+    if (argc < 2){
+        fprintf(stderr, "Usage: %s program.ml [args...] \n", argv[0]);
+        exit(1);
+    }
+
+    // Check if input file is of .ml type
+    char *filename = argv[1];
+    if (strstr(filename, ".ml") == NULL){
+        fprintf(stderr, "Error: Invalid file extension. Expected .ml file\n");
+        exit(1);
+    }
+
+    // Check file can be opened
     FILE *file = fopen(argv[1], "r");
-    
+    if (file == NULL) {
+        fprintf(stderr, "Error: Unable to open file %s\n", argv[1]);
+        exit(1);
+    }    
+
     // stores input file into array
     while ((ch = fgetc(file)) != EOF && index < sizeof(input) - 1) {
         input[index++] = ch;
@@ -192,6 +239,9 @@ int main(int argc, char *argv[]) {
     fclose(file); 
     
     parse(input);
+    
+    printf("%s", VARIABLE_TABLE[0].name);
+    printf("%f\n", VARIABLE_TABLE[0].val);
     
     return 0; 
 
