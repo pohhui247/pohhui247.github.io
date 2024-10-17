@@ -1,0 +1,200 @@
+// CITS2002  Project 2 2024 
+// Student1: 24128968 Pang Poh Hui  
+// Platform: Linux 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define RAM_SIZE 16
+
+typedef struct {
+int process_id;
+int page_number;
+int last_accessed;
+} memory;
+
+// Declared arrays and variables
+memory* RAM[RAM_SIZE] = {NULL}; 
+int simulation_time_step = -1;    
+int page_counter[4]  = {-1, -1, -1, -1};
+//pages for process      0,  1,  2,  3
+
+int page_table[4][4] = { {99, 99, 99, 99}, {99, 99, 99, 99}, {99, 99, 99, 99}, {99, 99, 99, 99} };
+//tables for process id:  0                 1                 2                 3 
+
+void initialize_ram() {
+    for (int RAM_index  = 0; RAM_index < RAM_SIZE; RAM_index++) {
+         RAM[RAM_index] = NULL; 
+    } 
+}     
+
+//find smallest step time for local process 
+void find_local_page_LRU(int *LRU, int *smallest_step_time, int current_process_id) {
+    for (int RAM_index = 0; RAM_index < 16; RAM_index += 2) {
+        if (RAM[RAM_index]->process_id == current_process_id && RAM[RAM_index]->last_accessed < *smallest_step_time) {
+			*smallest_step_time = RAM[RAM_index]->last_accessed;
+			*LRU = RAM_index; 
+        }
+    }
+}
+
+//find smallest step time for global process
+void find_global_page_LRU(int *LRU, int *smallest_step_time, int current_process_id) {
+	for (int RAM_index = 0; RAM_index < 16; RAM_index += 2) {
+		if (RAM[RAM_index]->last_accessed < *smallest_step_time) {
+			*smallest_step_time = RAM[RAM_index]->last_accessed;
+			*LRU = RAM_index; 
+		}
+	}
+}
+
+void load_page_into_ram(int current_process_id, int requested_page, int RAM_index) {
+    // Allocate memory for page
+    RAM[RAM_index] = (memory*)malloc(sizeof(memory));
+    RAM[RAM_index]->process_id = current_process_id;
+    RAM[RAM_index]->page_number = requested_page;
+    RAM[RAM_index]->last_accessed = simulation_time_step;
+
+
+    RAM[RAM_index + 1] = RAM[RAM_index];  // Use same memory for both locations in RAM
+    page_table[current_process_id][requested_page] = RAM_index / 2;  // Updates page table
+}
+
+// Evicts LRU page, loads new page in same slot
+void evict_page(int current_process_id, int requested_page, int LRU) {
+    // Evict the LRU page
+    int evicted_process_id   = RAM[LRU]->process_id;
+    int evicted_page_number  = RAM[LRU]->page_number;
+    page_table[evicted_process_id][evicted_page_number] = 99;  // Mark evicted page as on disk
+
+    // Load the new page in the LRU slot
+    RAM[LRU]->process_id     = current_process_id;
+    RAM[LRU]->page_number    = requested_page;
+    RAM[LRU]->last_accessed  = simulation_time_step;
+    RAM[LRU + 1] = RAM[LRU];  // Load into two contiguous slots
+
+    // Update page table for the current process
+    page_table[current_process_id][requested_page] = LRU / 2;
+}
+
+void process_request(int process_id[], int total_processes) {\
+
+    //loops for all processes 
+    for (int index = 0; index < total_processes; index++) {	
+    
+        int current_process_id = process_id[index];                                         // Current process
+		page_counter[current_process_id] = (page_counter[current_process_id] + 1) % 4;      // Page loaded for current process 
+		int requested_page = page_counter[current_process_id];                              // Position on page table of current process 
+        simulation_time_step++;  
+
+		if (page_table[current_process_id][requested_page] == 99) {                         
+		    
+			int RAM_space_available = 0;
+			// Finds empty slot in RAM, loads page
+			for (int RAM_index = 0; RAM_index < 16; RAM_index += 2) {
+				if (RAM[RAM_index] == NULL) { 
+					load_page_into_ram(current_process_id, requested_page, RAM_index);      
+                    RAM_space_available = 1;
+                    break;
+				}	
+			}
+			
+			// If theres no RAM space 
+			if (RAM_space_available == 0) {
+				
+				int LRU = -1; 
+				int smallest_step_time = simulation_time_step + 1;
+				
+			    //finds local LRU
+				find_local_page_LRU(&LRU, &smallest_step_time, current_process_id);
+					
+				if (LRU == -1) {
+					// Finds global LRU
+					find_global_page_LRU(&LRU, &smallest_step_time, current_process_id);
+					
+				}
+				
+				evict_page(current_process_id, requested_page, LRU);
+			}
+	
+		} else {
+			// If page already in RAM, update its last accessed time
+			int frame_number = page_table[current_process_id][requested_page] * 2;  // Get frame's starting index in RAM
+			RAM[frame_number]->last_accessed = simulation_time_step;                // Update last access time
+		}
+	
+	}
+}
+
+char process_id_array(FILE *file, int process_ids[], int *total_processes) {
+    int index = 0;
+	char character;
+    while ((character  = fgetc(file))     != EOF) {
+        if (character >= '0' && character <= '3') {
+            process_ids[index++]           = character - '0';
+			(*total_processes)++; 
+        }
+		
+		else if (!isspace(character)) {
+			printf("File must contain only digits 0 - 3, '%c' was in file.\n", character);
+			return 1;
+		}
+    }
+    return 0;
+}
+
+
+void print_ram_contents_output_file(const char *file) {
+	FILE *output = fopen(file, "w");
+	
+	fprintf(output, "RAM: [");
+	for (int i = 0; i < 16; i++) {
+		
+		// Prints RAM content
+        if (RAM[i] != NULL) {
+			fprintf(output, "%d,%d,%d", RAM[i]->process_id, RAM[i]->page_number, RAM[i]->last_accessed);
+        } else {
+			fprintf(output, "---");
+        }
+        
+        if (i < 15) {fprintf(output, "; ");
+        }
+    }
+	fprintf(output, "]");
+	
+	// Prints page tables for all processes
+    fprintf(output,"\nPage Tables:\n");
+    for (int process_id = 0; process_id < 4; process_id++) {
+        fprintf(output, "Process %d Page Table: ", process_id);
+        
+        for (int page_number = 0; page_number < 4; page_number++) {
+            if (page_table[process_id][page_number] != 99) {
+                // Page is in RAM, print frame number
+                fprintf(output,"0%d ", page_table[process_id][page_number]);
+            } else {
+                // Page is on disk, print 99
+                fprintf(output,"99 ");
+            }
+        }
+        fprintf(output,"\n");  // Newline after each process's page table
+    }
+	fclose(output);
+}
+
+
+int main(int argument_count, char *argument_value[]) {	
+
+    FILE *file = fopen(argument_value[1], "r");
+	int total_processes = 0;                                 //Counts number of processes 
+	int process_ids[100];                                    //Array to store string for process
+                                                            
+	initialize_ram();                                        //Initialize NULL RAM of 16 
+	process_id_array(file, process_ids, &total_processes);   //Read file/copy contents to array. Counts number of processes 
+	process_request(process_ids, total_processes);           //Simulates virtual memory
+	print_ram_contents_output_file(argument_value[2]);       //Writes RAM content to file
+	printf("process complete");
+
+    fclose(file);
+}
